@@ -1,5 +1,6 @@
 package com.p7.framework.netty.websocketx;
 
+import com.p7.framework.netty.IdleStateEventUtil;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -26,22 +27,6 @@ public class MessageHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        if (evt instanceof IdleStateEvent) {
-            IdleStateEvent idleStateEvent = (IdleStateEvent) evt;
-            String evtMsg = "";
-            switch (idleStateEvent.state()) {
-                case READER_IDLE:
-                    evtMsg = "读空闲";
-                    break;
-                case WRITER_IDLE:
-                    evtMsg = "写空闲";
-                    break;
-                case ALL_IDLE:
-                    evtMsg = "读写空闲";
-                    break;
-            }
-            System.out.println(ctx.channel().remoteAddress() + " 超时，超时类型：" + evtMsg);
-            super.userEventTriggered(ctx, evt);
-        }
+        IdleStateEventUtil.userEventTriggered(ctx, evt);
     }
 }
