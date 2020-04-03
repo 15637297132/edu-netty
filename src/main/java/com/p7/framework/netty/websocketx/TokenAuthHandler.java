@@ -2,6 +2,9 @@ package com.p7.framework.netty.websocketx;
 
 import com.p7.framework.netty.model.User;
 import com.p7.framework.netty.service.UserService;
+import com.p7.framework.netty.util.EnvUtil;
+import com.p7.framework.netty.websocketx.session.ServerUserInfo;
+import com.p7.framework.netty.websocketx.session.ServerUserManager;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
@@ -12,8 +15,10 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
@@ -39,9 +44,9 @@ import java.util.Map;
  **/
 @Component
 @ChannelHandler.Sharable
-public class AuthHandler extends SimpleChannelInboundHandler<Object> {
+public class TokenAuthHandler extends SimpleChannelInboundHandler<Object> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(AuthHandler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(TokenAuthHandler.class);
 
     private static final String TOKEN = "token";
 
@@ -86,7 +91,7 @@ public class AuthHandler extends SimpleChannelInboundHandler<Object> {
     }
 
     private void handleAuthAndWebSocketHandshake(ChannelHandlerContext ctx, FullHttpRequest request) {
-        if (!request.getDecoderResult().isSuccess() || !"websocket".equalsIgnoreCase(request.headers().get("Upgrade"))) {
+        if (!request.decoderResult().isSuccess() || !"websocket".equalsIgnoreCase(request.headers().get("Upgrade"))) {
             sendHttpResponse(ctx, request, new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST));
             LOGGER.error("不支持的协议");
             ctx.channel().close();
@@ -107,7 +112,7 @@ public class AuthHandler extends SimpleChannelInboundHandler<Object> {
             return;
         }
 
-        WebSocketServerHandshakerFactory factory = new WebSocketServerHandshakerFactory("ws://127.0.0.1/ws", null, true);
+        WebSocketServerHandshakerFactory factory = new WebSocketServerHandshakerFactory(getWebSocketLocation(request), null, true);
         // 如果不支持websocket的版本，返回null
         handshaker = factory.newHandshaker(request);
         if (handshaker == null) {
@@ -125,14 +130,14 @@ public class AuthHandler extends SimpleChannelInboundHandler<Object> {
     }
 
     private void sendHttpResponse(ChannelHandlerContext ctx, FullHttpRequest request, FullHttpResponse response) {
-        if (response.getStatus().code() != HttpResponseStatus.OK.code()) {
-            ByteBuf buf = Unpooled.copiedBuffer(response.getStatus().toString(), CharsetUtil.UTF_8);
+        if (response.status().code() != HttpResponseStatus.OK.code()) {
+            ByteBuf buf = Unpooled.copiedBuffer(response.status().toString(), CharsetUtil.UTF_8);
             response.content().writeBytes(buf);
             buf.release();
             HttpHeaders.setContentLength(response, response.content().readableBytes());
         }
         ChannelFuture f = ctx.channel().writeAndFlush(response);
-        if (!HttpHeaders.isKeepAlive(request) || response.getStatus().code() != HttpResponseStatus.OK.code()) {
+        if (!HttpUtil.isKeepAlive(request) || response.status().code() != HttpResponseStatus.OK.code()) {
             f.addListener(ChannelFutureListener.CLOSE);
         }
     }
@@ -141,5 +146,10 @@ public class AuthHandler extends SimpleChannelInboundHandler<Object> {
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         cause.printStackTrace();
         ctx.close();
+    }
+
+    private static String getWebSocketLocation(FullHttpRequest request) {
+        String location = request.headers().get(HttpHeaderNames.HOST) + EnvUtil.WS_PATH;
+        return EnvUtil.WS_SCHEME + location;
     }
 }

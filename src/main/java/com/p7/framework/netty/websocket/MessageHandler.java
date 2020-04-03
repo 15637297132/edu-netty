@@ -1,12 +1,10 @@
 package com.p7.framework.netty.websocket;
 
-import com.p7.framework.netty.IdleStateEventUtil;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
-import io.netty.handler.timeout.IdleStateEvent;
 
 /**
  * @author Yangzhen

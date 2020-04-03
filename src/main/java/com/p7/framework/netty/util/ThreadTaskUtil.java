@@ -1,4 +1,4 @@
-package com.p7.framework.netty.websocketx;
+package com.p7.framework.netty.util;
 
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;

@@ -13,9 +13,9 @@ public class Application {
         ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("classpath:spring-application.xml");
         context.registerShutdownHook();
         context.start();
-        synchronized (Server.class){
+        synchronized (WebSocketServer.class){
             try {
-                Server.class.wait();
+                WebSocketServer.class.wait();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

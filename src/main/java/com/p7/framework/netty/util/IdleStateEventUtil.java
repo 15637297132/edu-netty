@@ -1,4 +1,4 @@
-package com.p7.framework.netty;
+package com.p7.framework.netty.util;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.timeout.IdleStateEvent;

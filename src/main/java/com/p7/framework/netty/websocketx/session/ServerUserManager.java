@@ -1,4 +1,4 @@
-package com.p7.framework.netty.websocketx;
+package com.p7.framework.netty.websocketx.session;
 
 import io.netty.channel.Channel;
 import io.netty.channel.group.ChannelGroup;

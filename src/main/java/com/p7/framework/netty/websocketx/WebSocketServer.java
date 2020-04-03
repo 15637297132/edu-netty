@@ -1,16 +1,22 @@
 package com.p7.framework.netty.websocketx;
 
 import com.p7.framework.netty.service.WebSocketService;
+import com.p7.framework.netty.util.EnvUtil;
+import com.p7.framework.netty.util.InitUtil;
+import com.p7.framework.netty.util.ThreadTaskUtil;
+import com.p7.framework.netty.websocketx.session.ServerUserManager;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import org.slf4j.Logger;
@@ -25,12 +31,12 @@ import java.util.concurrent.TimeUnit;
  * @Description
  * @date 2020-03-26 9:36
  **/
-public class Server {
+public class WebSocketServer {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Server.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(WebSocketServer.class);
 
     @Resource
-    private AuthHandler authHandler;
+    private TokenAuthHandler tokenAuthHandler;
 
     @Resource
     private MessageHandler messageHandler;
@@ -38,22 +44,37 @@ public class Server {
     @Resource
     private WebSocketService webSocketService;
 
+
+    private SslContext sslCtx;
+
     private EventLoopGroup boss;
     private EventLoopGroup worker;
 
-    public void start() {
-        this.boss = new NioEventLoopGroup(1);
-        this.worker = new NioEventLoopGroup();
+    public void init() throws Exception {
+        if (EnvUtil.SSL) {
+            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+        } else {
+            sslCtx = null;
+        }
+
+        this.boss = InitUtil.initBoosEventLoopGroup();
+        this.worker = InitUtil.initWorkerEventLoopGroup();
+
         ServerBootstrap bootstrap = new ServerBootstrap();
-        bootstrap.group(boss, worker).channel(NioServerSocketChannel.class).option(ChannelOption.SO_BACKLOG, 1024).option(ChannelOption.SO_KEEPALIVE, false).option(ChannelOption.SO_REUSEADDR, true).childOption(ChannelOption.SO_KEEPALIVE, true).childHandler(new ChannelInitializer<SocketChannel>() {
+        bootstrap.group(boss, worker).channel(NioServerSocketChannel.class).option(ChannelOption.SO_BACKLOG, 1024).option(ChannelOption.SO_REUSEADDR, true).childOption(ChannelOption.SO_KEEPALIVE, true).childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
-                ch.pipeline().addLast(new HttpServerCodec(), new ChunkedWriteHandler(), new HttpObjectAggregator(65536), new IdleStateHandler(60, 0, 0, TimeUnit.SECONDS), authHandler, messageHandler);
+                ChannelPipeline pipeline = ch.pipeline();
+                if (sslCtx != null) {
+                    pipeline.addLast(sslCtx.newHandler(ch.alloc()));
+                }
+                pipeline.addLast(new HttpServerCodec(), new ChunkedWriteHandler(), new HttpObjectAggregator(65536), new IdleStateHandler(60, 0, 0, TimeUnit.SECONDS), tokenAuthHandler, messageHandler);
             }
         });
         try {
-            ChannelFuture channelFuture = bootstrap.bind(7777).sync();
-//            channelFuture.channel().closeFuture().sync();
+
+            InitUtil.serverStart(bootstrap,7777);
             ThreadTaskUtil.getScheduledExecutorService().scheduleAtFixedRate(new Runnable() {
                 @Override
                 public void run() {
