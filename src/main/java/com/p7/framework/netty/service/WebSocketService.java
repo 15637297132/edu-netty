@@ -1,5 +1,6 @@
 package com.p7.framework.netty.service;
 
+import com.p7.framework.netty.websocketx.session.ServerUserManager;
 import org.springframework.stereotype.Service;
 
 /**
