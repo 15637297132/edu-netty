@@ -4,7 +4,9 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,4 +74,7 @@ public class InitUtil {
         channelFuture.channel().closeFuture().sync();
     }
 
+    public static void setServerChannel(ServerBootstrap serverBootstrap) {
+        serverBootstrap.channel(EnvUtil.useEpoll() ? EpollServerSocketChannel.class : NioServerSocketChannel.class);
+    }
 }
